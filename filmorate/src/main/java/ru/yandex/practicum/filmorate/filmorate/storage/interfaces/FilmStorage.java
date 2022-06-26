@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface FilmStorage {
-    final LocalDate FIRST_FILM_DATE = LocalDate.of(1895, 12, 28);
+    final static LocalDate FIRST_FILM_DATE = LocalDate.of(1895, 12, 28);
     public List<Film> getFilms();
 
     public Film getFilmById(int id);
