@@ -5,6 +5,7 @@ import ru.yandex.practicum.filmorate.filmorate.model.User;
 import java.util.List;
 
 public interface UserStorage {
+
     public List<User> getUsers();
 
     public User getUserById(int id);

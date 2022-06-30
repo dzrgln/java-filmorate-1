@@ -15,6 +15,7 @@ import java.util.List;
 @Slf4j
 @RequestMapping("/users")
 public class UserController {
+
     private final UserStorage userStorage;
     private final UserService userService;
 

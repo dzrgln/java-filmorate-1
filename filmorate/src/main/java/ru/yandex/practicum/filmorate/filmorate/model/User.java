@@ -16,6 +16,7 @@ import java.util.Set;
 @Data
 public class User {
 
+
     public User(int id, String name, @NonNull String email, @NonNull String login, LocalDate birthday,
                 Set<Integer> friends, Set<Integer> favoriteFilms) {
         this.id = id;

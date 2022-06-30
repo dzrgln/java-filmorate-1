@@ -15,6 +15,7 @@ import java.util.List;
 //@Component
 //@Qualifier("InMemoryUserStorage")
 public class InMemoryUserStorage implements UserStorage {
+
     private final HashMap<Integer, User> users = new HashMap<>();
     private int id = 1;
 

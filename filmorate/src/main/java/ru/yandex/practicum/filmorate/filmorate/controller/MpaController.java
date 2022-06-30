@@ -14,6 +14,7 @@ import java.util.List;
 @Slf4j
 @RequestMapping("/mpa")
 public class MpaController {
+
     private final MpaStorage mpaStorage;
 
     public MpaController(MpaStorage mpaStorage) {

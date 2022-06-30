@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 @Component
 @Qualifier("FilmDbStorage")
 public class FilmDbStorage implements FilmStorage {
+
     private final JdbcTemplate jdbcTemplate;
 
     public FilmDbStorage(JdbcTemplate jdbcTemplate) {

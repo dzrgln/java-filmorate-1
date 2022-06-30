@@ -7,6 +7,7 @@ import java.util.Map;
 
 @Data
 public class Mpa {
+
     private int id;
     private String name;
 

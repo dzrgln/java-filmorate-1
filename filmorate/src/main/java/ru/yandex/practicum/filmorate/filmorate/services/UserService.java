@@ -19,6 +19,7 @@ import java.util.Map;
 @Service
 @Slf4j
 public class UserService {
+
     private final UserStorage userStorage;
     private final JdbcTemplate jdbcTemplate;
 

@@ -20,6 +20,7 @@ import java.util.Set;
 @Component
 @Qualifier("UserDbStorage")
 public class UserDbStorage implements UserStorage {
+
     private final JdbcTemplate jdbcTemplate;
 
     public UserDbStorage(JdbcTemplate jdbcTemplate) {

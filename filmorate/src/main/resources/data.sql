@@ -14,3 +14,4 @@ INSERT INTO RATING(RATING_NAME) values ( 'NC-17' );
 INSERT INTO STATUS(STATUS_NAME) values ( 'not confirmed');
 INSERT INTO STATUS(STATUS_NAME) values ( 'confirmed' );
 
+

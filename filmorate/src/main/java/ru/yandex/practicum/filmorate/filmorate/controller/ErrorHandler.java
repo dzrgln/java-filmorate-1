@@ -12,6 +12,7 @@ import ru.yandex.practicum.filmorate.filmorate.model.ErrorResponse;
 @RestControllerAdvice
 public class ErrorHandler {
 
+
     @ExceptionHandler
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ErrorResponse handleObjectNotFoundException(final ObjectNotFoundException e) {

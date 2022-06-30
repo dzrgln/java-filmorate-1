@@ -7,6 +7,7 @@ import java.util.Map;
 
 @Data
 public class Relationship {
+
     public Relationship(int userId, int friendId) {
         this.userId = userId;
         this.friendId = friendId;

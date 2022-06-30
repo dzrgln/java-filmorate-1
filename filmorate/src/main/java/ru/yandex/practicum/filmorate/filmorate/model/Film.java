@@ -12,6 +12,7 @@ import java.util.Map;
 
 @Data
 public class Film {
+
     public Film(int id, String name, String description, LocalDate releaseDate, int duration,
               List<Genre> genre, Mpa mpa) {
         this.id = id;

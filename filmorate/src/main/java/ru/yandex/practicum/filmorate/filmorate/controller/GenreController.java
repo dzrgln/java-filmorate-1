@@ -14,6 +14,7 @@ import java.util.List;
 @Slf4j
 @RequestMapping("/genres")
 public class GenreController {
+
     private final GenreStorage genreStorage;
 
     public GenreController(GenreStorage genreStorage) {
