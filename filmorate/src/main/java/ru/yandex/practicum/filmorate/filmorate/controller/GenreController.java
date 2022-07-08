@@ -28,6 +28,6 @@ public class GenreController {
 
     @GetMapping("/{genreId}")
     public Genre getGenreById(@PathVariable int genreId) {
-         return genreStorage.getGenreById(genreId);
-             }
+        return genreStorage.getGenreById(genreId);
+    }
 }

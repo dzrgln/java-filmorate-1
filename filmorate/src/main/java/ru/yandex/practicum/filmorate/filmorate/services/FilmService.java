@@ -21,18 +21,29 @@ public class FilmService {
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
     private final JdbcTemplate jdbcTemplate;
+    final String SQL_REMOVE_LIKE = "DELETE FROM LIKES WHERE USER_ID = ? AND FILM_ID = ?";
+    final String SQL_GET_LIST_POPULAR_FILMS = "SELECT FILM_ID, COUNT(USER_ID)\n" +
+            "FROM LIKES\n" +
+            "GROUP BY FILM_ID\n" +
+            "ORDER BY COUNT(USER_ID)\n" +
+            "LIMIT ?";
+    final String SQL_FOR_CHECKING_USER_ID = "SELECT * " +
+            "FROM USER " +
+            "WHERE USER_ID = ?";
+    final String SQL_FOR_CHECKING_FILM_ID = "SELECT * " +
+            "FROM FILM " +
+            "WHERE FILM_ID = ?";
 
     @Autowired
     public FilmService(
             @Qualifier("FilmDbStorage") FilmStorage filmStorage, UserStorage userStorage, JdbcTemplate jdbcTemplate) {
-
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.jdbcTemplate = jdbcTemplate;
     }
 
     public void addLike(Integer userId, Integer filmId) {
-        if(checkFilmId(filmId) && checkUserId(userId)){
+        if (checkFilmId(filmId) && checkUserId(userId)) {
             SimpleJdbcInsert simpleJdbcInsert = new SimpleJdbcInsert(jdbcTemplate)
                     .withTableName("LIKES")
                     .usingGeneratedKeyColumns("LIKE_ID");
@@ -48,9 +59,8 @@ public class FilmService {
     }
 
     public void removeLike(Integer userId, Integer filmId) {
-        if(checkFilmId(filmId) && checkUserId(userId)){
-            String deleteSql = "DELETE FROM LIKES WHERE USER_ID = ? AND FILM_ID = ?";
-            jdbcTemplate.update(deleteSql, userId, filmId);
+        if (checkFilmId(filmId) && checkUserId(userId)) {
+            jdbcTemplate.update(SQL_REMOVE_LIKE, userId, filmId);
 
         } else {
             throw new ObjectNotFoundException(
@@ -61,30 +71,20 @@ public class FilmService {
 
     public List<Film> getListPopularFilms(int limit) {
         List<Film> topFilms = new ArrayList<>();
-        String sql = "SELECT FILM_ID, COUNT(USER_ID)\n" +
-                "FROM LIKES\n" +
-                "GROUP BY FILM_ID\n" +
-                "ORDER BY COUNT(USER_ID)\n" +
-                "LIMIT ?";
-        SqlRowSet likeFilms = jdbcTemplate.queryForRowSet(sql, limit);
-        while (likeFilms.next()){
+        SqlRowSet likeFilms = jdbcTemplate.queryForRowSet(SQL_GET_LIST_POPULAR_FILMS, limit);
+        while (likeFilms.next()) {
             topFilms.add(filmStorage.getFilmById(likeFilms.getInt("FILM_ID")));
         }
         return topFilms;
     }
 
-    private boolean checkUserId(int userId){
-        String sql = "SELECT * " +
-                "FROM USER " +
-                "WHERE USER_ID = ?";
-        SqlRowSet userRows = jdbcTemplate.queryForRowSet(sql, userId);
+    private boolean checkUserId(int userId) {
+        SqlRowSet userRows = jdbcTemplate.queryForRowSet(SQL_FOR_CHECKING_USER_ID, userId);
         return userRows.next();
     }
-    private boolean checkFilmId(int filmId){
-        String sql = "SELECT * " +
-                "FROM FILM " +
-                "WHERE FILM_ID = ?";
-        SqlRowSet filmRows = jdbcTemplate.queryForRowSet(sql, filmId);
+
+    private boolean checkFilmId(int filmId) {
+        SqlRowSet filmRows = jdbcTemplate.queryForRowSet(SQL_FOR_CHECKING_FILM_ID, filmId);
         return filmRows.next();
     }
 }

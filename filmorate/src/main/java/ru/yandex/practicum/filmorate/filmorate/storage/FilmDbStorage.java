@@ -25,15 +25,43 @@ import java.util.stream.Collectors;
 public class FilmDbStorage implements FilmStorage {
     private final JdbcTemplate jdbcTemplate;
 
+    final String SQL_GET_FILMS = "SELECT F.FILM_ID,F.FILM_NAME, F.DESCRIPTION, F.RELEASE_DATE, F.DURATION " +
+            "FROM FILM AS F";
+    final String SQL_GET_FILM_BY_ID = "SELECT F.FILM_ID,F.FILM_NAME, F.DESCRIPTION, F.RELEASE_DATE, F.DURATION " +
+            "FROM FILM AS F " +
+            "WHERE film_id = ?";
+    final String SQL_FOR_UPDATE_FILM = "update FILM set " +
+            "FILM_NAME = ?, DESCRIPTION = ?, RELEASE_DATE = ?, DURATION = ?, RATING_ID = ? " +
+            "where FILM_ID = ?";
+    final String SQL_UPDATE_FILM = "SELECT FILM_ID FROM FILM WHERE FILM_ID = ?";
+    final String SQL_DELETE_FILM_FROM_FILMGENRE = "DELETE FROM FILM_GENRE WHERE FILM_ID = ?";
+    final String SQL_GET_MPA = "SELECT RATING_NAME FROM RATING WHERE RATING_ID = ?";
+    final String SQL_GET_GENRE = "SELECT GENRE_NAME FROM GENRE WHERE GENRE_ID = ?";
+    final String SQL_GET_MPA_BY_FILM = "SELECT R.RATING_ID, R.RATING_NAME\n" +
+            "FROM FILM AS F\n" +
+            "JOIN RATING R on F.RATING_ID = R.RATING_ID WHERE F.film_id = ?";
+    final String SQL_GET_GENRE_BY_FILM = "SELECT FG.GENRE_ID, G.GENRE_NAME\n" +
+            "      FROM FILM AS F\n" +
+            "      JOIN FILM_GENRE as FG on F.FILM_ID = FG.FILM_ID\n" +
+            "      JOIN GENRE as G on FG.GENRE_ID = G.GENRE_ID\n" +
+            "      WHERE F.film_id = ?";
+    final String SQL_FOR_ASSINMENT_ID_FOR_FILM = "SELECT FILM_ID\n" +
+            "FROM Film\n" +
+            "WHERE FILM_NAME = ?\n" +
+            "    AND DESCRIPTION = ?\n" +
+            "    AND RELEASE_DATE = ?\n" +
+            "    AND DURATION = ?\n" +
+            "    AND RATING_ID = ?";
+    final String SQL_FOR_CHECKING_FILMGENRE = "SELECT GENRE_ID, FILM_ID FROM FILM_GENRE WHERE FILM_ID = ? and GENRE_ID = ?";
+
+
     public FilmDbStorage(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     public List<Film> getFilms() {
-        String sql = "SELECT F.FILM_ID,F.FILM_NAME, F.DESCRIPTION, F.RELEASE_DATE, F.DURATION " +
-                "FROM FILM AS F";
-        SqlRowSet filmRows = jdbcTemplate.queryForRowSet(sql);
+        SqlRowSet filmRows = jdbcTemplate.queryForRowSet(SQL_GET_FILMS);
         List<Film> films = new ArrayList<>();
         while (filmRows.next()) {
             films.add(getFilmById(filmRows.getInt("FILM_ID")));
@@ -43,12 +71,8 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Film getFilmById(int id) {
-        String sql = "SELECT F.FILM_ID,F.FILM_NAME, F.DESCRIPTION, F.RELEASE_DATE, F.DURATION " +
-                "FROM FILM AS F " +
-                "WHERE film_id = ?";
-        SqlRowSet filmRows = jdbcTemplate.queryForRowSet(sql, id);
+        SqlRowSet filmRows = jdbcTemplate.queryForRowSet(SQL_GET_FILM_BY_ID, id);
         Film film = null;
-
         if (filmRows.next()) {
             film = new Film(
                     filmRows.getInt("FILM_ID"),
@@ -91,13 +115,9 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Film update(Film film) {
-        String sqlId = "SELECT FILM_ID FROM FILM WHERE FILM_ID = ?";
-        SqlRowSet idRows = jdbcTemplate.queryForRowSet(sqlId, film.getId());
+        SqlRowSet idRows = jdbcTemplate.queryForRowSet(SQL_UPDATE_FILM, film.getId());
         if (idRows.next()) {
-            String sql = "update FILM set " +
-                    "FILM_NAME = ?, DESCRIPTION = ?, RELEASE_DATE = ?, DURATION = ?, RATING_ID = ? " +
-                    "where FILM_ID = ?";
-            jdbcTemplate.update(sql
+            jdbcTemplate.update(SQL_FOR_UPDATE_FILM
                     , film.getName()
                     , film.getDescription()
                     , film.getReleaseDate()
@@ -106,7 +126,6 @@ public class FilmDbStorage implements FilmStorage {
                     , film.getId()
             );
             assignMpa(film);
-
             if (film.getGenres() != null) {
                 createRowFILM_GENRE(film);
                 assignGenre(film);
@@ -121,11 +140,9 @@ public class FilmDbStorage implements FilmStorage {
         return film;
     }
 
-
     private void assignMpa(Film film) {
         if (film.getMpa().getName() == null) {
-            String sql = "SELECT RATING_NAME FROM RATING WHERE RATING_ID = ?";
-            SqlRowSet mpaRow = jdbcTemplate.queryForRowSet(sql, film.getMpa().getId());
+            SqlRowSet mpaRow = jdbcTemplate.queryForRowSet(SQL_GET_MPA, film.getMpa().getId());
             if (mpaRow.next()) {
                 film.getMpa().setName(mpaRow.getString("RATING_NAME"));
             }
@@ -133,9 +150,8 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     private void assignGenre(Film film) {
-        String sql = "SELECT GENRE_NAME FROM GENRE WHERE GENRE_ID = ?";
         for (Genre genre : film.getGenres()) {
-            SqlRowSet mpaRow = jdbcTemplate.queryForRowSet(sql, genre.getId());
+            SqlRowSet mpaRow = jdbcTemplate.queryForRowSet(SQL_GET_GENRE, genre.getId());
             if (mpaRow.next()) {
                 genre.setName(mpaRow.getString("GENRE_NAME"));
             }
@@ -158,24 +174,18 @@ public class FilmDbStorage implements FilmStorage {
                 }
             }
         } else {
-            String sql = "DELETE FROM FILM_GENRE WHERE FILM_ID = ?";
-            jdbcTemplate.update(sql, film.getId());
+            deleteGenreForFilm(film);
         }
     }
 
     private void deleteGenreForFilm(Film film) {
-        String sql = "DELETE FROM FILM_GENRE WHERE FILM_ID = ?";
-        jdbcTemplate.update(sql, film.getId());
+        jdbcTemplate.update(SQL_DELETE_FILM_FROM_FILMGENRE, film.getId());
     }
 
 
     private List<Genre> getGenreByFilmId(int id) {
-        String sql = "SELECT FG.GENRE_ID, G.GENRE_NAME\n" +
-                "      FROM FILM AS F\n" +
-                "      JOIN FILM_GENRE as FG on F.FILM_ID = FG.FILM_ID\n" +
-                "      JOIN GENRE as G on FG.GENRE_ID = G.GENRE_ID\n" +
-                "      WHERE F.film_id = ?";
-        SqlRowSet genreRows = jdbcTemplate.queryForRowSet(sql, id);
+
+        SqlRowSet genreRows = jdbcTemplate.queryForRowSet(SQL_GET_GENRE_BY_FILM, id);
         List<Genre> genres = new ArrayList<>();
         while (genreRows.next()) {
             Genre genre = new Genre(
@@ -183,7 +193,7 @@ public class FilmDbStorage implements FilmStorage {
                     genreRows.getString("GENRE_NAME"));
             genres.add(genre);
         }
-        SqlRowSet genreRows1 = jdbcTemplate.queryForRowSet(sql, id);
+        SqlRowSet genreRows1 = jdbcTemplate.queryForRowSet(SQL_GET_GENRE_BY_FILM, id);
         if (!genreRows1.next()) {
             genres = null;
         }
@@ -191,10 +201,7 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     private Mpa getMpaByFilmId(int id) {
-        String sql = "SELECT R.RATING_ID, R.RATING_NAME\n" +
-                "FROM FILM AS F\n" +
-                "JOIN RATING R on F.RATING_ID = R.RATING_ID WHERE F.film_id = ?";
-        SqlRowSet mpaRows = jdbcTemplate.queryForRowSet(sql, id);
+        SqlRowSet mpaRows = jdbcTemplate.queryForRowSet(SQL_GET_MPA_BY_FILM, id);
         Mpa mpa = null;
         if (mpaRows.next()) {
             mpa = new Mpa(
@@ -207,14 +214,7 @@ public class FilmDbStorage implements FilmStorage {
 
     private void assignIdForFilm(Film film) {
         if (film.getId() == 0) {
-            String sqlForId = "SELECT FILM_ID\n" +
-                    "FROM Film\n" +
-                    "WHERE FILM_NAME = ?\n" +
-                    "    AND DESCRIPTION = ?\n" +
-                    "    AND RELEASE_DATE = ?\n" +
-                    "    AND DURATION = ?\n" +
-                    "    AND RATING_ID = ?";
-            SqlRowSet filmIdRows = jdbcTemplate.queryForRowSet(sqlForId,
+            SqlRowSet filmIdRows = jdbcTemplate.queryForRowSet(SQL_FOR_ASSINMENT_ID_FOR_FILM,
                     film.getName(),
                     film.getDescription(),
                     film.getReleaseDate(),
@@ -236,8 +236,7 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     private boolean checkRatingFilmDuplicate(Film film, Genre genre) {
-        String sql = "SELECT GENRE_ID, FILM_ID FROM FILM_GENRE WHERE FILM_ID = ? and GENRE_ID = ?";
-        SqlRowSet filmGenreRows = jdbcTemplate.queryForRowSet(sql, film.getId(), genre.getId());
+        SqlRowSet filmGenreRows = jdbcTemplate.queryForRowSet(SQL_FOR_CHECKING_FILMGENRE, film.getId(), genre.getId());
         return filmGenreRows.next();
     }
 }

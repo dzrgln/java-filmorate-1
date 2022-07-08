@@ -21,6 +21,30 @@ import java.util.Set;
 @Qualifier("UserDbStorage")
 public class UserDbStorage implements UserStorage {
     private final JdbcTemplate jdbcTemplate;
+    final String SQL_GET_USERS = "SELECT * " +
+            "FROM USER";
+    final  String SQL_GET_USERS_BY_ID = "SELECT * " +
+            "FROM USER " +
+            "WHERE USER_ID = ?";
+    final String SQL_UPDATE_USER = "SELECT USER_ID FROM USER WHERE USER_ID = ?";
+    final String SQLUPDATE = "update USER set " +
+            "USER_NAME = ?, EMAIL = ?, LOGIN = ?, BIRTHDAY = ? " +
+            "where USER_ID = ?";
+    final String SQL_GET_FRIENDS_FOR_USER_BY_ID = "SELECT R.FRIEND_ID, STATUS_NAME\n" +
+            "    FROM USER AS U\n" +
+            "JOIN RELATIONSHIP AS R ON U.USER_ID = R.USER_ID\n" +
+            "JOIN STATUS S on R.STATUS_ID = S.STATUS_ID\n" +
+            "WHERE STATUS_NAME = 'confirmed' and U.USER_ID = ?;";
+    final String SQL_GET_FAVORITE_FILMS_FOR_USER_BE_ID = "SELECT L.FILM_ID\n" +
+            "    FROM USER AS U\n" +
+            "JOIN LIKES AS L ON U.USER_ID = L.USER_ID\n" +
+            "WHERE U.USER_ID = ?;";
+    final String SQL_FOR_ASSIGNMENT_ID_FOR_USER = "SELECT USER_ID\n" +
+            "FROM User\n" +
+            "WHERE USER_NAME = ?\n" +
+            "    AND EMAIL = ?\n" +
+            "    AND LOGIN = ?\n" +
+            "    AND BIRTHDAY = ?\n";
 
     public UserDbStorage(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -28,9 +52,7 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public List<User> getUsers() {
-        String sql = "SELECT * " +
-                "FROM USER";
-        SqlRowSet userRows = jdbcTemplate.queryForRowSet(sql);
+        SqlRowSet userRows = jdbcTemplate.queryForRowSet(SQL_GET_USERS);
         List<User> users = new ArrayList<>();
         while (userRows.next()) {
             users.add(getUserById(userRows.getInt("USER_ID")));
@@ -40,10 +62,7 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public User getUserById(int id) {
-        String sql = "SELECT * " +
-                "FROM USER " +
-                "WHERE USER_ID = ?";
-        SqlRowSet userRows = jdbcTemplate.queryForRowSet(sql, id);
+        SqlRowSet userRows = jdbcTemplate.queryForRowSet(SQL_GET_USERS_BY_ID, id);
         User user = null;
         if (userRows.next()) {
             user = new User(
@@ -80,13 +99,9 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public User update(User user) {
-        String sqlId = "SELECT USER_ID FROM USER WHERE USER_ID = ?";
-        SqlRowSet idRows = jdbcTemplate.queryForRowSet(sqlId, user.getId());
+        SqlRowSet idRows = jdbcTemplate.queryForRowSet(SQL_UPDATE_USER, user.getId());
         if (idRows.next()) {
-            String sqlUpdate = "update USER set " +
-                    "USER_NAME = ?, EMAIL = ?, LOGIN = ?, BIRTHDAY = ? " +
-                    "where USER_ID = ?";
-            jdbcTemplate.update(sqlUpdate
+            jdbcTemplate.update(SQLUPDATE
                     , user.getName()
                     , user.getEmail()
                     , user.getLogin()
@@ -111,12 +126,7 @@ public class UserDbStorage implements UserStorage {
     }
 
     private Set<Integer> getFriendsByUserId(int id) {
-        String sql = "SELECT R.FRIEND_ID, STATUS_NAME\n" +
-                "    FROM USER AS U\n" +
-                "JOIN RELATIONSHIP AS R ON U.USER_ID = R.USER_ID\n" +
-                "JOIN STATUS S on R.STATUS_ID = S.STATUS_ID\n" +
-                "WHERE STATUS_NAME = 'confirmed' and U.USER_ID = ?;";
-        SqlRowSet friendRows = jdbcTemplate.queryForRowSet(sql, id);
+        SqlRowSet friendRows = jdbcTemplate.queryForRowSet(SQL_GET_FRIENDS_FOR_USER_BY_ID, id);
         Set<Integer> setId = new HashSet<>();
         while (friendRows.next()) {
             setId.add(friendRows.getInt("FRIEND_ID"));
@@ -125,11 +135,7 @@ public class UserDbStorage implements UserStorage {
     }
 
     private Set<Integer> getFavoriteFilmsByUserId(int id) {
-        String sql = "SELECT L.FILM_ID\n" +
-                "    FROM USER AS U\n" +
-                "JOIN LIKES AS L ON U.USER_ID = L.USER_ID\n" +
-                "WHERE U.USER_ID = ?;";
-        SqlRowSet favoriteFilmsRows = jdbcTemplate.queryForRowSet(sql, id);
+        SqlRowSet favoriteFilmsRows = jdbcTemplate.queryForRowSet(SQL_GET_FAVORITE_FILMS_FOR_USER_BE_ID, id);
         Set<Integer> setId = new HashSet<>();
         while (favoriteFilmsRows.next()) {
             setId.add(favoriteFilmsRows.getInt("FILM_ID"));
@@ -139,13 +145,7 @@ public class UserDbStorage implements UserStorage {
 
     private void assignIdForUser(User user) {
         if (user.getId() == 0) {
-            String sqlForId = "SELECT USER_ID\n" +
-                    "FROM User\n" +
-                    "WHERE USER_NAME = ?\n" +
-                    "    AND EMAIL = ?\n" +
-                    "    AND LOGIN = ?\n" +
-                    "    AND BIRTHDAY = ?\n";
-            SqlRowSet userIdRows = jdbcTemplate.queryForRowSet(sqlForId,
+            SqlRowSet userIdRows = jdbcTemplate.queryForRowSet(SQL_FOR_ASSIGNMENT_ID_FOR_USER,
                     user.getName(),
                     user.getEmail(),
                     user.getLogin(),
@@ -155,4 +155,5 @@ public class UserDbStorage implements UserStorage {
             }
         }
     }
+
 }

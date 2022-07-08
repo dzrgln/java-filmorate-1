@@ -21,7 +21,16 @@ import java.util.Map;
 public class UserService {
     private final UserStorage userStorage;
     private final JdbcTemplate jdbcTemplate;
-
+    final String SQL_UPDATE_RELATIONSHIP2 = "update RELATIONSHIP set STATUS_ID = 2 where USER_ID = ? AND FRIEND_ID = ?";
+    final String SQL_FOR_CHECKING_FRIENDS = "SELECT * FROM RELATIONSHIP WHERE USER_ID = ? AND FRIEND_ID = ?";
+    final String SQL_DELETE_RELATIONSHIP = "DELETE FROM RELATIONSHIP WHERE USER_ID = ? AND FRIEND_ID = ?";
+    final String SQL_UPDATE_RELATIONSHIP1 = "update RELATIONSHIP set STATUS_ID = 1 where FRIEND_ID = ? AND USER_ID = ?";
+    final String SQL_GET_MUTAL_FRIENDS = "SELECT FRIEND_ID FROM RELATIONSHIP WHERE USER_ID=?\n" +
+            "INTERSECT\n" +
+            "SELECT FRIEND_ID FROM RELATIONSHIP WHERE USER_ID=?";
+    final String SQL_CHECKING = "SELECT * " +
+            "FROM USER " +
+            "WHERE USER_ID = ?";
 
     @Autowired
     public UserService(@Qualifier("UserDbStorage") UserStorage userStorage, JdbcTemplate jdbcTemplate) {
@@ -44,26 +53,24 @@ public class UserService {
                     String.format("Пользователя с id \"%s\" или с id \"%s\" не существует."
                             , userId, friendId));
         }
-        if(isFriends(userId, friendId)){
-            String sql = "update RELATIONSHIP set STATUS_ID = 2 where USER_ID = ? AND FRIEND_ID = ?";
-            jdbcTemplate.update(sql, userId, friendId);
-            jdbcTemplate.update(sql, friendId, userId);
+        if (isFriends(userId, friendId)) {
+
+            jdbcTemplate.update(SQL_UPDATE_RELATIONSHIP1, userId, friendId);
+            jdbcTemplate.update(SQL_UPDATE_RELATIONSHIP1, friendId, userId);
         }
     }
-    private boolean isFriends(Integer userId, Integer friendId){
-        String userFriendSql = "SELECT * FROM RELATIONSHIP WHERE USER_ID = ? AND FRIEND_ID = ?";
-        SqlRowSet userFriendRow = jdbcTemplate.queryForRowSet(userFriendSql, userId, friendId);
-        SqlRowSet friendUserRow = jdbcTemplate.queryForRowSet(userFriendSql, friendId, userId);
+
+    private boolean isFriends(Integer userId, Integer friendId) {
+        SqlRowSet userFriendRow = jdbcTemplate.queryForRowSet(SQL_FOR_CHECKING_FRIENDS, userId, friendId);
+        SqlRowSet friendUserRow = jdbcTemplate.queryForRowSet(SQL_FOR_CHECKING_FRIENDS, friendId, userId);
         return userFriendRow.next() && friendUserRow.next();
     }
 
     public void removeFriend(Integer userId, Integer friendId) {
         if (checkUserId(userId) && checkUserId(friendId)) {
-            String deleteSql = "DELETE FROM RELATIONSHIP WHERE USER_ID = ? AND FRIEND_ID = ?";
-            jdbcTemplate.update(deleteSql, userId, friendId);
-            String updateSql = "update RELATIONSHIP set STATUS_ID = 1 where FRIEND_ID = ? AND USER_ID = ?";
-            jdbcTemplate.update(updateSql, friendId, userId);
-            } else {
+            jdbcTemplate.update(SQL_DELETE_RELATIONSHIP, userId, friendId);
+            jdbcTemplate.update(SQL_UPDATE_RELATIONSHIP1, friendId, userId);
+        } else {
             throw new ObjectNotFoundException(
                     String.format("Пользователя с id \"%s\" или с id \"%s\" не существует."
                             , userId, friendId));
@@ -73,11 +80,11 @@ public class UserService {
     public List<User> getFriendsList(Integer userId) {
         List<User> list = new ArrayList<>();
         if (checkUserId(userId)) {
-            String sql = "SELECT FRIEND_ID FROM RELATIONSHIP WHERE USER_ID = ?";
-            SqlRowSet friends = jdbcTemplate.queryForRowSet(sql, userId);
-             while (friends.next()){
-                 list.add(userStorage.getUserById(friends.getInt("FRIEND_ID")));
-              }
+            final String SQL = "SELECT FRIEND_ID FROM RELATIONSHIP WHERE USER_ID = ?";
+            SqlRowSet friends = jdbcTemplate.queryForRowSet(SQL, userId);
+            while (friends.next()) {
+                list.add(userStorage.getUserById(friends.getInt("FRIEND_ID")));
+            }
         } else {
             throw new ObjectNotFoundException(
                     String.format("Пользователя с id \"%s\"не существует.", userId));
@@ -88,13 +95,10 @@ public class UserService {
     public List<User> getMutualFriends(Integer userId, Integer friendId) {
         List<User> list = new ArrayList<>();
         if (checkUserId(userId) && checkUserId(friendId)) {
-            String sql = "SELECT FRIEND_ID FROM RELATIONSHIP WHERE USER_ID=?\n" +
-                    "INTERSECT\n" +
-                    "SELECT FRIEND_ID FROM RELATIONSHIP WHERE USER_ID=?";
-            SqlRowSet friends = jdbcTemplate.queryForRowSet(sql, userId, friendId);
-                while (friends.next()) {
-                    list.add(userStorage.getUserById(friends.getInt("FRIEND_ID")));
-                }
+            SqlRowSet friends = jdbcTemplate.queryForRowSet(SQL_GET_MUTAL_FRIENDS, userId, friendId);
+            while (friends.next()) {
+                list.add(userStorage.getUserById(friends.getInt("FRIEND_ID")));
+            }
         } else {
             throw new ObjectNotFoundException(
                     String.format("Пользователя с id \"%s\" или с id \"%s\" не существует."
@@ -103,11 +107,8 @@ public class UserService {
         return list;
     }
 
-    private boolean checkUserId(int userId){
-        String sql = "SELECT * " +
-                "FROM USER " +
-                "WHERE USER_ID = ?";
-        SqlRowSet userRows = jdbcTemplate.queryForRowSet(sql, userId);
+    private boolean checkUserId(int userId) {
+        SqlRowSet userRows = jdbcTemplate.queryForRowSet(SQL_CHECKING, userId);
         return userRows.next();
     }
 
