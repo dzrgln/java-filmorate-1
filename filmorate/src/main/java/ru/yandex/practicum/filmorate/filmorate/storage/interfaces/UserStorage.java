@@ -12,4 +12,12 @@ public interface UserStorage {
     public User create(User user);
 
     public User update (User user);
+
+    List<User> getMutualFriends(int userId, int friendId);
+
+    List<User> getFriendsList(int userId);
+
+    void removeFriend(int userId, int friendId);
+
+    void addFriend(int userId, int friendId);
 }
