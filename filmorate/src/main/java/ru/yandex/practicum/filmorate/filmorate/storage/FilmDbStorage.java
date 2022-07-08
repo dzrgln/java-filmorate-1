@@ -25,35 +25,47 @@ import java.util.stream.Collectors;
 public class FilmDbStorage implements FilmStorage {
     private final JdbcTemplate jdbcTemplate;
 
-    final String SQL_GET_FILMS = "SELECT F.FILM_ID,F.FILM_NAME, F.DESCRIPTION, F.RELEASE_DATE, F.DURATION " +
+    private final String SQL_GET_FILMS = "SELECT F.FILM_ID,F.FILM_NAME, F.DESCRIPTION, F.RELEASE_DATE, F.DURATION " +
             "FROM FILM AS F";
-    final String SQL_GET_FILM_BY_ID = "SELECT F.FILM_ID,F.FILM_NAME, F.DESCRIPTION, F.RELEASE_DATE, F.DURATION " +
+    private final String SQL_GET_FILM_BY_ID = "SELECT F.FILM_ID,F.FILM_NAME, F.DESCRIPTION, F.RELEASE_DATE, F.DURATION " +
             "FROM FILM AS F " +
             "WHERE film_id = ?";
-    final String SQL_FOR_UPDATE_FILM = "update FILM set " +
+    private final String SQL_FOR_UPDATE_FILM = "update FILM set " +
             "FILM_NAME = ?, DESCRIPTION = ?, RELEASE_DATE = ?, DURATION = ?, RATING_ID = ? " +
             "where FILM_ID = ?";
-    final String SQL_UPDATE_FILM = "SELECT FILM_ID FROM FILM WHERE FILM_ID = ?";
-    final String SQL_DELETE_FILM_FROM_FILMGENRE = "DELETE FROM FILM_GENRE WHERE FILM_ID = ?";
-    final String SQL_GET_MPA = "SELECT RATING_NAME FROM RATING WHERE RATING_ID = ?";
-    final String SQL_GET_GENRE = "SELECT GENRE_NAME FROM GENRE WHERE GENRE_ID = ?";
-    final String SQL_GET_MPA_BY_FILM = "SELECT R.RATING_ID, R.RATING_NAME\n" +
+    private  final String SQL_UPDATE_FILM = "SELECT FILM_ID FROM FILM WHERE FILM_ID = ?";
+    private final String SQL_DELETE_FILM_FROM_FILMGENRE = "DELETE FROM FILM_GENRE WHERE FILM_ID = ?";
+    private final String SQL_GET_MPA = "SELECT RATING_NAME FROM RATING WHERE RATING_ID = ?";
+    private    final String SQL_GET_GENRE = "SELECT GENRE_NAME FROM GENRE WHERE GENRE_ID = ?";
+    private  final String SQL_GET_MPA_BY_FILM = "SELECT R.RATING_ID, R.RATING_NAME\n" +
             "FROM FILM AS F\n" +
             "JOIN RATING R on F.RATING_ID = R.RATING_ID WHERE F.film_id = ?";
-    final String SQL_GET_GENRE_BY_FILM = "SELECT FG.GENRE_ID, G.GENRE_NAME\n" +
+    private   final String SQL_GET_GENRE_BY_FILM = "SELECT FG.GENRE_ID, G.GENRE_NAME\n" +
             "      FROM FILM AS F\n" +
             "      JOIN FILM_GENRE as FG on F.FILM_ID = FG.FILM_ID\n" +
             "      JOIN GENRE as G on FG.GENRE_ID = G.GENRE_ID\n" +
             "      WHERE F.film_id = ?";
-    final String SQL_FOR_ASSINMENT_ID_FOR_FILM = "SELECT FILM_ID\n" +
+    private  final String SQL_FOR_ASSINMENT_ID_FOR_FILM = "SELECT FILM_ID\n" +
             "FROM Film\n" +
             "WHERE FILM_NAME = ?\n" +
             "    AND DESCRIPTION = ?\n" +
             "    AND RELEASE_DATE = ?\n" +
             "    AND DURATION = ?\n" +
             "    AND RATING_ID = ?";
-    final String SQL_FOR_CHECKING_FILMGENRE = "SELECT GENRE_ID, FILM_ID FROM FILM_GENRE WHERE FILM_ID = ? and GENRE_ID = ?";
+    private    final String SQL_FOR_CHECKING_FILMGENRE = "SELECT GENRE_ID, FILM_ID FROM FILM_GENRE WHERE FILM_ID = ? and GENRE_ID = ?";
 
+    private final String SQL_REMOVE_LIKE = "DELETE FROM LIKES WHERE USER_ID = ? AND FILM_ID = ?";
+    private   final String SQL_GET_LIST_POPULAR_FILMS = "SELECT FILM_ID, COUNT(USER_ID)\n" +
+            "FROM LIKES\n" +
+            "GROUP BY FILM_ID\n" +
+            "ORDER BY COUNT(USER_ID)\n" +
+            "LIMIT ?";
+    private    final String SQL_FOR_CHECKING_USER_ID = "SELECT * " +
+            "FROM USER " +
+            "WHERE USER_ID = ?";
+    private   final String SQL_FOR_CHECKING_FILM_ID = "SELECT * " +
+            "FROM FILM " +
+            "WHERE FILM_ID = ?";
 
     public FilmDbStorage(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -138,6 +150,35 @@ public class FilmDbStorage implements FilmStorage {
             throw new ObjectNotFoundException("Указанного фильма не существует");
         }
         return film;
+    }
+
+    @Override
+    public void addLike(int userId, int filmId) {
+        if (checkFilmId(filmId) && checkUserId(userId)) {
+            SimpleJdbcInsert simpleJdbcInsert = new SimpleJdbcInsert(jdbcTemplate)
+                    .withTableName("LIKES")
+                    .usingGeneratedKeyColumns("LIKE_ID");
+            Map<String, Object> like = new HashMap<>();
+            like.put("USER_ID", userId);
+            like.put("FILM_ID", filmId);
+            simpleJdbcInsert.execute(like);
+        } else {
+            throw new ObjectNotFoundException(
+                    String.format("Пользователя с id \"%s\" или фильма с id \"%s\" не существует."
+                            , userId, filmId));
+        }
+    }
+
+    @Override
+    public void removeLike(int userId, int filmId) {
+        if (checkFilmId(filmId) && checkUserId(userId)) {
+            jdbcTemplate.update(SQL_REMOVE_LIKE, userId, filmId);
+
+        } else {
+            throw new ObjectNotFoundException(
+                    String.format("Пользователя с id \"%s\" или фильма с id \"%s\" не существует."
+                            , userId, filmId));
+        }
     }
 
     private void assignMpa(Film film) {
@@ -238,5 +279,24 @@ public class FilmDbStorage implements FilmStorage {
     private boolean checkRatingFilmDuplicate(Film film, Genre genre) {
         SqlRowSet filmGenreRows = jdbcTemplate.queryForRowSet(SQL_FOR_CHECKING_FILMGENRE, film.getId(), genre.getId());
         return filmGenreRows.next();
+    }
+
+    public List<Film> getListPopularFilms(int limit) {
+        List<Film> topFilms = new ArrayList<>();
+        SqlRowSet likeFilms = jdbcTemplate.queryForRowSet(SQL_GET_LIST_POPULAR_FILMS, limit);
+        while (likeFilms.next()) {
+            topFilms.add(getFilmById(likeFilms.getInt("FILM_ID")));
+        }
+        return topFilms;
+    }
+
+    private boolean checkUserId(int userId) {
+        SqlRowSet userRows = jdbcTemplate.queryForRowSet(SQL_FOR_CHECKING_USER_ID, userId);
+        return userRows.next();
+    }
+
+    private boolean checkFilmId(int filmId) {
+        SqlRowSet filmRows = jdbcTemplate.queryForRowSet(SQL_FOR_CHECKING_FILM_ID, filmId);
+        return filmRows.next();
     }
 }

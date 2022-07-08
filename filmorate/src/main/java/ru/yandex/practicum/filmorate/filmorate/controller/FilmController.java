@@ -49,21 +49,21 @@ public class FilmController {
 
     @PutMapping("/{userId}/like/{filmId}")
     public void addLike(@PathVariable int userId, @PathVariable int filmId) {
-        filmService.addLike(userId, filmId);
+        filmStorage.addLike(userId, filmId);
     }
 
     @DeleteMapping("/{userId}/like/{filmId}")
     public void removeLike(@PathVariable int userId, @PathVariable int filmId) {
-        filmService.removeLike(userId, filmId);
+        filmStorage.removeLike(userId, filmId);
     }
 
     @GetMapping("/popular")
     public List<Film> getListPopularFilms(@RequestParam(required = false) String count) {
         List<Film> filmList = null;
         if (count == null) {
-            filmList = filmService.getListPopularFilms(10);
+            filmList = filmStorage.getListPopularFilms(10);
         } else {
-            filmList = filmService.getListPopularFilms(Integer.parseInt(count));
+            filmList = filmStorage.getListPopularFilms(Integer.parseInt(count));
         }
         return filmList;
     }

@@ -19,8 +19,8 @@ public class MpaDbStorage implements MpaStorage {
     public MpaDbStorage(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
-    final String SQL_GET_MPA = "SELECT RATING_ID, RATING_NAME FROM RATING";
-    final String SQL_GET_MPA_BY_ID = "SELECT RATING_ID, RATING_NAME FROM RATING WHERE RATING_ID = ?";
+    private  final String SQL_GET_MPA = "SELECT RATING_ID, RATING_NAME FROM RATING";
+    private   final String SQL_GET_MPA_BY_ID = "SELECT RATING_ID, RATING_NAME FROM RATING WHERE RATING_ID = ?";
 
     @Override
     public List<Mpa> getMpa() {

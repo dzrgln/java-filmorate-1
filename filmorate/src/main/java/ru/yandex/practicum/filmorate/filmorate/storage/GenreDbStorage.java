@@ -15,8 +15,8 @@ import java.util.List;
 @Component
 public class GenreDbStorage implements GenreStorage {
     private final JdbcTemplate jdbcTemplate;
-    final String SQL_GET_GENRES = "SELECT G.GENRE_ID, G.GENRE_NAME FROM GENRE AS G";
-    final String SQL_GET_GENRES_BY_ID = "SELECT GENRE_ID, GENRE_NAME FROM GENRE WHERE GENRE_ID = ?";
+    private   final String SQL_GET_GENRES = "SELECT G.GENRE_ID, G.GENRE_NAME FROM GENRE AS G";
+    private  final String SQL_GET_GENRES_BY_ID = "SELECT GENRE_ID, GENRE_NAME FROM GENRE WHERE GENRE_ID = ?";
 
     public GenreDbStorage(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
